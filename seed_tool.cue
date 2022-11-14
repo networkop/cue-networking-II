@@ -36,7 +36,7 @@ command: test: {
 			manufacturerID: string
 
 			getManufacturer: http.Get & {
-				url: manufacturerAPI + "?name=\(device.vendor)"
+				url:     manufacturerAPI + "?name=\(device.vendor)"
 				request: ipamHeaders
 			}
 			getResponse: json.Unmarshal(getManufacturer.response.body)
@@ -45,13 +45,13 @@ command: test: {
 				getCheck: cli.Print & {
 					text: "ManufacturerID for \(device.vendor) is \(getResponse.results[0].id)"
 				}
-                manufacturerID: getResponse.results[0].id
+				manufacturerID: getResponse.results[0].id
 			}
 
 			if getManufacturer.response.statusCode == 200 && list.MaxItems(getResponse.results, 0) {
 
 				createManufacturer: http.Post & {
-					url: manufacturerAPI
+					url:     manufacturerAPI
 					request: ipamHeaders & {
 						body: json.Marshal({
 							name:    device.vendor
@@ -64,7 +64,7 @@ command: test: {
 				createCheck:    cli.Print & {
 					text: "ManufacturerID for \(device.vendor) is \(createResponse.id)"
 				}
-                manufacturerID: createResponse.id
+				manufacturerID: createResponse.id
 			}
 		}
 
