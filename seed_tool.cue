@@ -8,13 +8,19 @@ import (
 )
 
 #inventory: [{
-	name:   "sw01"
+	name:   "lon-sw-01"
 	vendor: "NVIDIA1"
 	type:   "SN4700"
+	role:   "switch"
+	site:   "LON1"
+	status: "Active"
 }, {
-	name:   "sw02"
+	name:   "lon-sw-02"
 	vendor: "Arista1"
 	type:   "7050X3"
+	role:   "switch"
+	site:   "LON2"
+	status: "Active"
 }]
 
 ipam:  *"demo.nautobot.com/api" | string                    @tag(ipam)
@@ -25,48 +31,189 @@ ipamHeaders: header: {
 	"Content-Type":  "application/json"
 }
 
-command: test: {
-	for _, device in #inventory {
-		(device.name): {
-			start: cli.Print & {
-				text: "Processing device \(device.name)"
-			}
+applyResource: {
+	// input args
+	apiURL:     string
+	queryName:  string
+	queryValue: string
+	resource: {}
+	resourceName: string
 
-			let manufacturerAPI = "https://\(ipam)/dcim/manufacturers/"
-			manufacturerID: string
+	let query = "\(queryName)=\(queryValue)"
 
-			getManufacturer: http.Get & {
-				url:     manufacturerAPI + "?name=\(device.vendor)"
-				request: ipamHeaders
-			}
-			getResponse: json.Unmarshal(getManufacturer.response.body)
+	getResource: http.Get & {
+		url:     apiURL + "?\(query)"
+		request: ipamHeaders
+	}
+	getResponse: json.Unmarshal(getResource.response.body)
 
-			if getManufacturer.response.statusCode == 200 && list.MinItems(getResponse.results, 1) {
-				getCheck: cli.Print & {
-					text: "ManufacturerID for \(device.vendor) is \(getResponse.results[0].id)"
-				}
-				manufacturerID: getResponse.results[0].id
-			}
+	//getLog: cli.Print & {
+	// text: "getResource: \(resourceName)[\(query)]"
+	//}
 
-			if getManufacturer.response.statusCode == 200 && list.MaxItems(getResponse.results, 0) {
+	if getResource.response.statusCode == 200 && list.MinItems(getResponse.results, 1) {
+		check: cli.Print & {
+			text: "Found \(resourceName)[\(query)] with ID \(getResponse.results[0].id)"
+		}
+		resourceID: getResponse.results[0].id
+	}
 
-				createManufacturer: http.Post & {
-					url:     manufacturerAPI
-					request: ipamHeaders & {
-						body: json.Marshal({
-							name:    device.vendor
-							display: device.vendor
-						})
-					}
-				}
+	if getResource.response.statusCode == 200 && list.MaxItems(getResponse.results, 0) {
+		//createLog: cli.Print & {
+		// text: "createResource: \(resourceName)[\(resource)]"
+		//}
 
-				createResponse: json.Unmarshal(createManufacturer.response.body)
-				createCheck:    cli.Print & {
-					text: "ManufacturerID for \(device.vendor) is \(createResponse.id)"
-				}
-				manufacturerID: createResponse.id
+		createResource: http.Post & {
+			url:     apiURL
+			request: ipamHeaders & {
+				body: json.Marshal(resource)
 			}
 		}
 
+		createResponse: json.Unmarshal(createResource.response.body)
+		check:          cli.Print & {
+			text: "Created \(resourceName)[\(query)] with ID \(createResponse.id)"
+		}
+		resourceID: createResponse.id
+	}
+}
+
+command: {
+	apply: {
+		for _, dev in #inventory {
+			(dev.name): {
+				start: cli.Print & {
+					text: "Processing device \(dev.name)"
+				}
+
+				myVendor: applyResource & {
+					apiURL:       "https://\(ipam)/dcim/manufacturers/"
+					queryName:    "name"
+					queryValue:   dev.vendor
+					resourceName: "manufacturer"
+					resource: {
+						name: dev.vendor
+					}
+				}
+
+				mySite: applyResource & {
+					apiURL:       "https://\(ipam)/dcim/sites/"
+					queryName:    "name"
+					queryValue:   dev.site
+					resourceName: "site"
+					resource: {
+						name:   dev.site
+						status: dev.status
+					}
+				}
+
+				myRole: applyResource & {
+					apiURL:       "https://\(ipam)/dcim/device-roles/"
+					queryName:    "name"
+					queryValue:   dev.role
+					resourceName: "role"
+					resource: {
+						name: dev.role
+					}
+				}
+
+				myModel: applyResource & {
+					apiURL:       "https://\(ipam)/dcim/device-types/"
+					queryName:    "model"
+					queryValue:   dev.type
+					resourceName: "model"
+					resource: {
+						model:        dev.type
+						manufacturer: myVendor.resourceID
+					}
+				}
+
+				myDevice: applyResource & {
+					apiURL:       "https://\(ipam)/dcim/devices/"
+					queryName:    "name"
+					queryValue:   dev.name
+					resourceName: "device"
+					resource: {
+						name:        dev.name
+						device_type: myModel.resourceID
+						site:        mySite.resourceID
+						device_role: myRole.resourceID
+						status:      dev.status
+					}
+				}
+			}
+		}
+	}
+	cleanup: {
+		for _, device in #inventory {
+			(device.name): {
+				start: cli.Print & {
+					text: "Deleting resources for \(device.name)"
+				}
+
+				deleteDevice: deleteResource & {
+					apiURL:       "https://\(ipam)/dcim/devices/"
+					queryName:    "name"
+					queryValue:   device.name
+					resourceName: "device"
+				}
+
+				deleteModel: deleteResource & {
+					apiURL:       "https://\(ipam)/dcim/device-types/"
+					queryName:    "model"
+					queryValue:   device.type
+					resourceName: "model"
+					$after:       cleanup["\(device.name)"].deleteDevice.$done
+				}
+
+				deleteVendor: deleteResource & {
+					apiURL:       "https://\(ipam)/dcim/manufacturers/"
+					queryName:    "name"
+					queryValue:   device.vendor
+					resourceName: "manufacturer"
+					$after:       deleteModel.$done
+				}
+
+			}
+		}
+	}
+}
+
+deleteResource: {
+	// input args
+	apiURL:       string
+	queryName:    string
+	queryValue:   string
+	resourceName: string
+
+	let query = "\(queryName)=\(queryValue)"
+
+	getResource: http.Get & {
+		url:     apiURL + "?\(query)"
+		request: ipamHeaders
+	}
+
+	//logResource: cli.Print & {
+	// text: "getResource: \(getResource.response.body)"
+	//}
+	getResponse: json.Unmarshal(getResource.response.body)
+
+	if getResource.response.statusCode == 200 && list.MinItems(getResponse.results, 1) {
+		check: cli.Print & {
+			text: "Found \(resourceName)[\(query)] with ID \(getResponse.results[0].id)"
+		}
+		resourceID: getResponse.results[0].id
+
+		deleteDevice: http.Delete & {
+			url:     apiURL
+			request: ipamHeaders & {
+				body: json.Marshal([{
+					id: resourceID
+				}])
+			}
+		}
+		deleteDeviceCheck: cli.Print & {
+			text: "Delete \(resourceName)[\(query)] response is '\(deleteDevice.response.status)'"
+		}
 	}
 }
