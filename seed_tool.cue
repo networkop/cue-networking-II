@@ -145,33 +145,33 @@ command: {
 		}
 	}
 	cleanup: {
-		for _, device in #inventory {
-			(device.name): {
+		for _, dev in #inventory {
+			(dev.name): {
 				start: cli.Print & {
-					text: "Deleting resources for \(device.name)"
+					text: "Deleting resources for \(dev.name)"
 				}
 
 				deleteDevice: deleteResource & {
 					apiURL:       "https://\(ipam)/dcim/devices/"
 					queryName:    "name"
-					queryValue:   device.name
+					queryValue:   dev.name
 					resourceName: "device"
 				}
 
 				deleteModel: deleteResource & {
 					apiURL:       "https://\(ipam)/dcim/device-types/"
 					queryName:    "model"
-					queryValue:   device.type
+					queryValue:   dev.type
 					resourceName: "model"
-					$after:       cleanup["\(device.name)"].deleteDevice.$done
+					$after:       deleteDevice.resourceID | "Done"
 				}
 
 				deleteVendor: deleteResource & {
 					apiURL:       "https://\(ipam)/dcim/manufacturers/"
 					queryName:    "name"
-					queryValue:   device.vendor
+					queryValue:   dev.vendor
 					resourceName: "manufacturer"
-					$after:       deleteModel.$done
+					$after:       deleteModel.resourceID | "Done"
 				}
 
 			}
