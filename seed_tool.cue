@@ -8,19 +8,21 @@ import (
 )
 
 #inventory: [{
-	name:   "lon-sw-01"
-	vendor: "NVIDIA1"
-	type:   "SN4700"
-	role:   "switch"
-	site:   "LON1"
-	status: "Active"
+	name:     "lon-sw-01"
+	vendor:   "NVIDIA1"
+	type:     "SN4700"
+	role:     "switch"
+	site:     "LON1"
+	status:   "Active"
+	loopback: "198.51.100.1/32"
 }, {
-	name:   "lon-sw-02"
-	vendor: "Arista1"
-	type:   "7050X3"
-	role:   "switch"
-	site:   "LON2"
-	status: "Active"
+	name:     "lon-sw-02"
+	vendor:   "Arista1"
+	type:     "7050X3"
+	role:     "switch"
+	site:     "LON2"
+	status:   "Active"
+	loopback: "198.51.100.2/32"
 }]
 
 ipam:  *"demo.nautobot.com/api" | string                    @tag(ipam)
@@ -48,34 +50,40 @@ applyResource: {
 	getResponse: json.Unmarshal(getResource.response.body)
 
 	//getLog: cli.Print & {
-	// text: "getResource: \(resourceName)[\(query)]"
+	// text: "getResource: \(resourceName)[\(query)]: \(getResource.response.status)"
 	//}
 
-	if getResource.response.statusCode == 200 && list.MinItems(getResponse.results, 1) {
-		check: cli.Print & {
-			text: "Found \(resourceName)[\(query)] with ID \(getResponse.results[0].id)"
-		}
-		resourceID: getResponse.results[0].id
-	}
+	// guarding conditionals due to https://github.com/cue-lang/cue/issues/1593
+	guard: {
+		if getResource.response.statusCode == 200 {
 
-	if getResource.response.statusCode == 200 && list.MaxItems(getResponse.results, 0) {
-		//createLog: cli.Print & {
-		// text: "createResource: \(resourceName)[\(resource)]"
-		//}
+			if list.MinItems(getResponse.results, 1) {
+				check: cli.Print & {
+					text: "Found \(resourceName)[\(query)] with ID \(getResponse.results[0].id)"
+				}
+				resourceID: getResponse.results[0].id
+			}
+			if list.MaxItems(getResponse.results, 0) {
 
-		createResource: http.Post & {
-			url:     apiURL
-			request: ipamHeaders & {
-				body: json.Marshal(resource)
+				createResource: http.Post & {
+					url:     apiURL
+					request: ipamHeaders & {
+						body: json.Marshal(resource)
+					}
+				}
+				//createLog: cli.Print & {
+				// text: "createResource:  \(createResource.response.body)"
+				//}
+
+				createResponse: json.Unmarshal(createResource.response.body)
+				check:          cli.Print & {
+					text: "Created \(resourceName)[\(query)] with ID \(createResponse.id)"
+				}
+				resourceID: createResponse.id
 			}
 		}
-
-		createResponse: json.Unmarshal(createResource.response.body)
-		check:          cli.Print & {
-			text: "Created \(resourceName)[\(query)] with ID \(createResponse.id)"
-		}
-		resourceID: createResponse.id
 	}
+
 }
 
 command: {
@@ -124,7 +132,7 @@ command: {
 					resourceName: "model"
 					resource: {
 						model:        dev.type
-						manufacturer: myVendor.resourceID
+						manufacturer: myVendor.guard.resourceID
 					}
 				}
 
@@ -135,15 +143,47 @@ command: {
 					resourceName: "device"
 					resource: {
 						name:        dev.name
-						device_type: myModel.resourceID
-						site:        mySite.resourceID
-						device_role: myRole.resourceID
+						device_type: myModel.guard.resourceID
+						site:        mySite.guard.resourceID
+						device_role: myRole.guard.resourceID
 						status:      dev.status
+					}
+				}
+
+				myLoopback: applyResource & {
+					apiURL:       "https://\(ipam)/dcim/interfaces/"
+					queryName:    "device_id"
+					queryValue:   myDevice.guard.resourceID
+					resourceName: "interface"
+					resource: {
+						name:   "loopback0"
+						device: myDevice.guard.resourceID
+						status: dev.status
+						role:   "loopback"
+						type:   "virtual"
+					}
+				}
+
+				myIP: applyResource & {
+					apiURL:       "https://\(ipam)/ipam/ip-addresses/"
+					queryName:    "address"
+					queryValue:   dev.loopback
+					resourceName: "ipaddress"
+					resource: {
+						address:              dev.loopback
+						assigned_object_type: "dcim.interface"
+						assigned_object_id:   myLoopback.guard.resourceID
+						status:               dev.status
+						type:                 "virtual"
+						role:                 "loopback"
 					}
 				}
 			}
 		}
 	}
+}
+
+command: {
 	cleanup: {
 		for _, dev in #inventory {
 			(dev.name): {
@@ -163,7 +203,7 @@ command: {
 					queryName:    "model"
 					queryValue:   dev.type
 					resourceName: "model"
-					$after:       deleteDevice.resourceID | "Done"
+					dep:          deleteDevice.guard.resourceID
 				}
 
 				deleteVendor: deleteResource & {
@@ -171,9 +211,15 @@ command: {
 					queryName:    "name"
 					queryValue:   dev.vendor
 					resourceName: "manufacturer"
-					$after:       deleteModel.resourceID | "Done"
+					dep:          deleteModel.guard.resourceID
 				}
 
+				deleteIP: deleteResource & {
+					apiURL:       "https://\(ipam)/ipam/ip-addresses/"
+					queryName:    "address"
+					queryValue:   dev.loopback
+					resourceName: "ipaddress"
+				}
 			}
 		}
 	}
@@ -198,22 +244,24 @@ deleteResource: {
 	//}
 	getResponse: json.Unmarshal(getResource.response.body)
 
-	if getResource.response.statusCode == 200 && list.MinItems(getResponse.results, 1) {
-		check: cli.Print & {
-			text: "Found \(resourceName)[\(query)] with ID \(getResponse.results[0].id)"
-		}
-		resourceID: getResponse.results[0].id
-
-		deleteDevice: http.Delete & {
-			url:     apiURL
-			request: ipamHeaders & {
-				body: json.Marshal([{
-					id: resourceID
-				}])
+	guard: {
+		if getResource.response.statusCode == 200 && list.MinItems(getResponse.results, 1) {
+			check: cli.Print & {
+				text: "Found \(resourceName)[\(query)] with ID \(getResponse.results[0].id)"
 			}
-		}
-		deleteDeviceCheck: cli.Print & {
-			text: "Delete \(resourceName)[\(query)] response is '\(deleteDevice.response.status)'"
+			resourceID: getResponse.results[0].id 
+
+			deleteDevice: http.Delete & {
+				url:     apiURL
+				request: ipamHeaders & {
+					body: json.Marshal([{
+						id: resourceID
+					}])
+				}
+			}
+			deleteDeviceCheck: cli.Print & {
+				text: "Delete \(resourceName)[\(query)] response is '\(deleteDevice.response.status)'"
+			}
 		}
 	}
 }
