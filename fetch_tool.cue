@@ -1,14 +1,14 @@
 package main
 
 import (
-  "list"
+	"list"
 	"tool/cli"
-  "tool/exec"
+	"tool/exec"
 	"text/template"
 	"tool/file"
 	"tool/http"
 	"encoding/json"
-  "encoding/yaml"
+	"encoding/yaml"
 	"github.com/networkop/cue-networking-II/inventory"
 )
 
@@ -49,30 +49,30 @@ command: fetch: {
 			}
 
 			log: cli.Print & {
-			 text: "gql response: \(gqlRequest.response.body)"
+				text: "gql response: \(gqlRequest.response.body)"
 			}
 
 			response: json.Unmarshal(gqlRequest.response.body)
 
 			if list.MinItems(response.data.devices, 1) {
 				let device = response.data.devices[0]
-        let dirName = "\(device.device_role.name)/\(device.name)"
+				let dirName = "config/\(device.device_role.name)/\(device.name)"
 
 				dirs: file.MkdirAll & {
 					path: "\(dirName)"
 				}
 
-        input: file.Create & {
-          filename: "\(dirName)/\(device.name).yml"
-          contents: yaml.Marshal(device)
-        }
+				input: file.Create & {
+					filename: "\(dirName)/\(device.name).yml"
+					contents: yaml.Marshal(device)
+				}
 
-        gen: exec.Run & {
-          cmd: "cue import -p input -l 'input' -l 'name' \(device.name).yml"
-          dir: "\(dirName)"
-        }
+				gen: exec.Run & {
+					cmd:    "cue import -p main -f -l \"hostvars\" -l name \(device.name).yml"
+					dir:    "\(dirName)"
+					$after: input
+				}
 			}
-
 		}
 	}
 }
