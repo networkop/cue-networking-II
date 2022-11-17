@@ -1,36 +1,150 @@
-package seed
+package main
 
 import (
 	"tool/cli"
 	"tool/http"
 	"encoding/json"
+	"github.com/networkop/cue-networking-II/inventory"
 	"list"
 )
 
-#inventory: [{
-	name:     "lon-sw-01"
-	vendor:   "NVIDIA1"
-	type:     "SN4700"
-	role:     "switch"
-	site:     "LON1"
-	status:   "Active"
-	loopback: "198.51.100.1/32"
-}, {
-	name:     "lon-sw-02"
-	vendor:   "Arista1"
-	type:     "7050X3"
-	role:     "switch"
-	site:     "LON2"
-	status:   "Active"
-	loopback: "198.51.100.2/32"
-}]
+command: {
+	apply: {
+		for _, dev in inventory.#devices {
+			(dev.name): {
+				start: cli.Print & {
+					text: "Processing device \(dev.name)"
+				}
 
-ipam:  *"demo.nautobot.com/api" | string                    @tag(ipam)
-token: *"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" | string @tag(token)
-ipamHeaders: header: {
-	"Authorization": "Token \(token)"
-	"Accept":        "application/json"
-	"Content-Type":  "application/json"
+				myVendor: applyResource & {
+					apiURL:       "\(inventory._ipam.url)/dcim/manufacturers/"
+					queryName:    "name"
+					queryValue:   dev.vendor
+					resourceName: "manufacturer"
+					resource: {
+						name: dev.vendor
+					}
+				}
+
+				mySite: applyResource & {
+					apiURL:       "\(inventory._ipam.url)/dcim/sites/"
+					queryName:    "name"
+					queryValue:   dev.site
+					resourceName: "site"
+					resource: {
+						name:   dev.site
+						status: dev.status
+					}
+				}
+
+				myRole: applyResource & {
+					apiURL:       "\(inventory._ipam.url)/dcim/device-roles/"
+					queryName:    "name"
+					queryValue:   dev.role
+					resourceName: "role"
+					resource: {
+						name: dev.role
+					}
+				}
+
+				myModel: applyResource & {
+					apiURL:       "\(inventory._ipam.url)/dcim/device-types/"
+					queryName:    "model"
+					queryValue:   dev.type
+					resourceName: "model"
+					resource: {
+						model:        dev.type
+						manufacturer: myVendor.guard.resourceID
+					}
+				}
+
+				myDevice: applyResource & {
+					apiURL:       "\(inventory._ipam.url)/dcim/devices/"
+					queryName:    "name"
+					queryValue:   dev.name
+					resourceName: "device"
+					resource: {
+						name:        dev.name
+						device_type: myModel.guard.resourceID
+						site:        mySite.guard.resourceID
+						device_role: myRole.guard.resourceID
+						status:      dev.status
+					}
+				}
+
+				myLoopback: applyResource & {
+					apiURL:       "\(inventory._ipam.url)/dcim/interfaces/"
+					queryName:    "device_id"
+					queryValue:   myDevice.guard.resourceID
+					resourceName: "interface"
+					resource: {
+						name:   "loopback0"
+						device: myDevice.guard.resourceID
+						status: dev.status
+						role:   "loopback"
+						type:   "virtual"
+					}
+				}
+
+				myIP: applyResource & {
+					apiURL:       "\(inventory._ipam.url)/_ipam/ip-addresses/"
+					queryName:    "address"
+					queryValue:   dev.loopback
+					resourceName: "ipaddress"
+					resource: {
+						address:              dev.loopback
+						assigned_object_type: "dcim.interface"
+						assigned_object_id:   myLoopback.guard.resourceID
+						status:               dev.status
+						type:                 "virtual"
+						role:                 "loopback"
+					}
+				}
+			}
+		}
+	}
+}
+
+command: {
+	cleanup: {
+		for _, dev in inventory.#devices {
+			(dev.name): {
+				start: cli.Print & {
+					text: "Deleting resources for \(dev.name)"
+				}
+
+				deleteDevice: deleteResource & {
+					apiURL:       "\(inventory._ipam.url)/dcim/devices/"
+					queryName:    "name"
+					queryValue:   dev.name
+					resourceName: "device"
+				}
+
+				deleteModel: deleteResource & {
+					apiURL:       "\(inventory._ipam.url)/dcim/device-types/"
+					queryName:    "model"
+					queryValue:   dev.type
+					resourceName: "model"
+					dep:          deleteDevice.guard.deleteResource.$done
+				}
+
+				deleteVendor: deleteResource & {
+					apiURL:       "\(inventory._ipam.url)/dcim/manufacturers/"
+					queryName:    "name"
+					queryValue:   dev.vendor
+					resourceName: "manufacturer"
+					dep:          deleteModel.guard.deleteResource.$done
+				}
+
+				deleteIP: deleteResource & {
+					apiURL:       "\(inventory._ipam.url)/_ipam/ip-addresses/"
+					queryName:    "address"
+					queryValue:   dev.loopback
+					resourceName: "ipaddress"
+				}
+			}
+		}
+	}
 }
 
 applyResource: {
@@ -45,7 +159,7 @@ applyResource: {
 
 	getResource: http.Get & {
 		url:     apiURL + "?\(query)"
-		request: ipamHeaders
+		request: inventory._ipam.headers
 	}
 	getResponse: json.Unmarshal(getResource.response.body)
 
@@ -67,7 +181,7 @@ applyResource: {
 
 				createResource: http.Post & {
 					url:     apiURL
-					request: ipamHeaders & {
+					request: inventory._ipam.headers & {
 						body: json.Marshal(resource)
 					}
 				}
@@ -80,146 +194,6 @@ applyResource: {
 					text: "Created \(resourceName)[\(query)] with ID \(createResponse.id)"
 				}
 				resourceID: createResponse.id
-			}
-		}
-	}
-
-}
-
-command: {
-	apply: {
-		for _, dev in #inventory {
-			(dev.name): {
-				start: cli.Print & {
-					text: "Processing device \(dev.name)"
-				}
-
-				myVendor: applyResource & {
-					apiURL:       "https://\(ipam)/dcim/manufacturers/"
-					queryName:    "name"
-					queryValue:   dev.vendor
-					resourceName: "manufacturer"
-					resource: {
-						name: dev.vendor
-					}
-				}
-
-				mySite: applyResource & {
-					apiURL:       "https://\(ipam)/dcim/sites/"
-					queryName:    "name"
-					queryValue:   dev.site
-					resourceName: "site"
-					resource: {
-						name:   dev.site
-						status: dev.status
-					}
-				}
-
-				myRole: applyResource & {
-					apiURL:       "https://\(ipam)/dcim/device-roles/"
-					queryName:    "name"
-					queryValue:   dev.role
-					resourceName: "role"
-					resource: {
-						name: dev.role
-					}
-				}
-
-				myModel: applyResource & {
-					apiURL:       "https://\(ipam)/dcim/device-types/"
-					queryName:    "model"
-					queryValue:   dev.type
-					resourceName: "model"
-					resource: {
-						model:        dev.type
-						manufacturer: myVendor.guard.resourceID
-					}
-				}
-
-				myDevice: applyResource & {
-					apiURL:       "https://\(ipam)/dcim/devices/"
-					queryName:    "name"
-					queryValue:   dev.name
-					resourceName: "device"
-					resource: {
-						name:        dev.name
-						device_type: myModel.guard.resourceID
-						site:        mySite.guard.resourceID
-						device_role: myRole.guard.resourceID
-						status:      dev.status
-					}
-				}
-
-				myLoopback: applyResource & {
-					apiURL:       "https://\(ipam)/dcim/interfaces/"
-					queryName:    "device_id"
-					queryValue:   myDevice.guard.resourceID
-					resourceName: "interface"
-					resource: {
-						name:   "loopback0"
-						device: myDevice.guard.resourceID
-						status: dev.status
-						role:   "loopback"
-						type:   "virtual"
-					}
-				}
-
-				myIP: applyResource & {
-					apiURL:       "https://\(ipam)/ipam/ip-addresses/"
-					queryName:    "address"
-					queryValue:   dev.loopback
-					resourceName: "ipaddress"
-					resource: {
-						address:              dev.loopback
-						assigned_object_type: "dcim.interface"
-						assigned_object_id:   myLoopback.guard.resourceID
-						status:               dev.status
-						type:                 "virtual"
-						role:                 "loopback"
-					}
-				}
-			}
-		}
-	}
-}
-
-command: {
-	cleanup: {
-		for _, dev in #inventory {
-			(dev.name): {
-				start: cli.Print & {
-					text: "Deleting resources for \(dev.name)"
-				}
-
-				deleteDevice: deleteResource & {
-					apiURL:       "https://\(ipam)/dcim/devices/"
-					queryName:    "name"
-					queryValue:   dev.name
-					resourceName: "device"
-				}
-
-				deleteModel: deleteResource & {
-					apiURL:       "https://\(ipam)/dcim/device-types/"
-					queryName:    "model"
-					queryValue:   dev.type
-					resourceName: "model"
-					dep:       deleteDevice.guard.deleteResource.$done
-				}
-
-				deleteVendor: deleteResource & {
-					apiURL:       "https://\(ipam)/dcim/manufacturers/"
-					queryName:    "name"
-					queryValue:   dev.vendor
-					resourceName: "manufacturer"
-					dep:       deleteModel.guard.deleteResource.$done
-				}
-
-				deleteIP: deleteResource & {
-					apiURL:       "https://\(ipam)/ipam/ip-addresses/"
-					queryName:    "address"
-					queryValue:   dev.loopback
-					resourceName: "ipaddress"
-				}
 			}
 		}
 	}
@@ -237,8 +211,8 @@ deleteResource: {
 
 	getResource: http.Get & {
 		url:     apiURL + "?\(query)"
-		request: ipamHeaders
-		$after: dep
+		request: inventory._ipam.headers
+		$after:  dep
 	}
 
 	//logResource: cli.Print & {
@@ -255,15 +229,14 @@ deleteResource: {
 
 			deleteResource: http.Delete & {
 				url:     apiURL
-				request: ipamHeaders & {
+				request: inventory._ipam.headers & {
 					body: json.Marshal([{
 						id: resourceID
 					}])
-				}	
+				}
 			}
 			deleteResourceCheck: cli.Print & {
 				text: "Delete \(resourceName)[\(query)] response is '\(deleteResource.response.status)'"
-				
 			}
 		}
 	}
