@@ -17,7 +17,7 @@ command: {
 				}
 
 				myVendor: applyResource & {
-					apiURL:       "\(inventory._ipam.url)/dcim/manufacturers/"
+					apiURL:       "\(inventory.ipam.url)/dcim/manufacturers/"
 					queryName:    "name"
 					queryValue:   dev.vendor
 					resourceName: "manufacturer"
@@ -27,7 +27,7 @@ command: {
 				}
 
 				mySite: applyResource & {
-					apiURL:       "\(inventory._ipam.url)/dcim/sites/"
+					apiURL:       "\(inventory.ipam.url)/dcim/sites/"
 					queryName:    "name"
 					queryValue:   dev.site
 					resourceName: "site"
@@ -38,7 +38,7 @@ command: {
 				}
 
 				myRole: applyResource & {
-					apiURL:       "\(inventory._ipam.url)/dcim/device-roles/"
+					apiURL:       "\(inventory.ipam.url)/dcim/device-roles/"
 					queryName:    "name"
 					queryValue:   dev.role
 					resourceName: "role"
@@ -48,7 +48,7 @@ command: {
 				}
 
 				myModel: applyResource & {
-					apiURL:       "\(inventory._ipam.url)/dcim/device-types/"
+					apiURL:       "\(inventory.ipam.url)/dcim/device-types/"
 					queryName:    "model"
 					queryValue:   dev.type
 					resourceName: "model"
@@ -59,7 +59,7 @@ command: {
 				}
 
 				myDevice: applyResource & {
-					apiURL:       "\(inventory._ipam.url)/dcim/devices/"
+					apiURL:       "\(inventory.ipam.url)/dcim/devices/"
 					queryName:    "name"
 					queryValue:   dev.name
 					resourceName: "device"
@@ -73,7 +73,7 @@ command: {
 				}
 
 				myLoopback: applyResource & {
-					apiURL:       "\(inventory._ipam.url)/dcim/interfaces/"
+					apiURL:       "\(inventory.ipam.url)/dcim/interfaces/"
 					queryName:    "device_id"
 					queryValue:   myDevice.guard.resourceID
 					resourceName: "interface"
@@ -87,7 +87,7 @@ command: {
 				}
 
 				myIP: applyResource & {
-					apiURL:       "\(inventory._ipam.url)/_ipam/ip-addresses/"
+					apiURL:       "\(inventory.ipam.url)/ipam/ip-addresses/"
 					queryName:    "address"
 					queryValue:   dev.loopback
 					resourceName: "ipaddress"
@@ -114,14 +114,14 @@ command: {
 				}
 
 				deleteDevice: deleteResource & {
-					apiURL:       "\(inventory._ipam.url)/dcim/devices/"
+					apiURL:       "\(inventory.ipam.url)/dcim/devices/"
 					queryName:    "name"
 					queryValue:   dev.name
 					resourceName: "device"
 				}
 
 				deleteModel: deleteResource & {
-					apiURL:       "\(inventory._ipam.url)/dcim/device-types/"
+					apiURL:       "\(inventory.ipam.url)/dcim/device-types/"
 					queryName:    "model"
 					queryValue:   dev.type
 					resourceName: "model"
@@ -129,7 +129,7 @@ command: {
 				}
 
 				deleteVendor: deleteResource & {
-					apiURL:       "\(inventory._ipam.url)/dcim/manufacturers/"
+					apiURL:       "\(inventory.ipam.url)/dcim/manufacturers/"
 					queryName:    "name"
 					queryValue:   dev.vendor
 					resourceName: "manufacturer"
@@ -137,7 +137,7 @@ command: {
 				}
 
 				deleteIP: deleteResource & {
-					apiURL:       "\(inventory._ipam.url)/_ipam/ip-addresses/"
+					apiURL:       "\(inventory.ipam.url)/ipam/ip-addresses/"
 					queryName:    "address"
 					queryValue:   dev.loopback
 					resourceName: "ipaddress"
@@ -159,7 +159,7 @@ applyResource: {
 
 	getResource: http.Get & {
 		url:     apiURL + "?\(query)"
-		request: inventory._ipam.headers
+		request: inventory.ipam.headers
 	}
 	getResponse: json.Unmarshal(getResource.response.body)
 
@@ -181,7 +181,7 @@ applyResource: {
 
 				createResource: http.Post & {
 					url:     apiURL
-					request: inventory._ipam.headers & {
+					request: inventory.ipam.headers & {
 						body: json.Marshal(resource)
 					}
 				}
@@ -211,7 +211,7 @@ deleteResource: {
 
 	getResource: http.Get & {
 		url:     apiURL + "?\(query)"
-		request: inventory._ipam.headers
+		request: inventory.ipam.headers
 		$after:  dep
 	}
 
@@ -229,7 +229,7 @@ deleteResource: {
 
 			deleteResource: http.Delete & {
 				url:     apiURL
-				request: inventory._ipam.headers & {
+				request: inventory.ipam.headers & {
 					body: json.Marshal([{
 						id: resourceID
 					}])

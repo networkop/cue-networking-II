@@ -3,6 +3,7 @@ package main
 import (
   "list"
 	"tool/cli"
+  "tool/exec"
 	"text/template"
 	"tool/file"
 	"tool/http"
@@ -39,8 +40,8 @@ command: fetch: {
 		(dev.name): {
 
 			gqlRequest: http.Post & {
-				url:     inventory._ipam.url + "/graphql/"
-				request: inventory._ipam.headers & {
+				url:     inventory.ipam.url + "/graphql/"
+				request: inventory.ipam.headers & {
 					body: json.Marshal({
 						query: template.Execute(gqlQuery, {name: dev.name})
 					})
@@ -55,17 +56,21 @@ command: fetch: {
 
 			if list.MinItems(response.data.devices, 1) {
 				let device = response.data.devices[0]
-        let dir = "\(device.device_role.name)/\(device.name)"
+        let dirName = "\(device.device_role.name)/\(device.name)"
 
 				dirs: file.MkdirAll & {
-					path: "\(dir)"
+					path: "\(dirName)"
 				}
 
         input: file.Create & {
-          filename: "\(dir)/\(device.name).yml"
+          filename: "\(dirName)/\(device.name).yml"
           contents: yaml.Marshal(device)
         }
 
+        gen: exec.Run & {
+          cmd: "cue import -p input -l 'input' -l 'name' \(device.name).yml"
+          dir: "\(dirName)"
+        }
 			}
 
 		}

@@ -18,7 +18,7 @@ package inventory
 	loopback: "198.51.100.2/32"
 }]
 
-_ipam: {
+ipam: {
 	url:   *"https://demo.nautobot.com/api" | string            @tag(ipamURL)
 	token: *"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" | string @tag(ipamToken)
 	headers: header: {
