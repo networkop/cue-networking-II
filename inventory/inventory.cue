@@ -7,6 +7,7 @@ package inventory
 	role:     "lleaf"
 	site:     "LON1"
 	status:   "Active"
+	asn:      65000
 	loopback: "198.51.100.1/32"
 }, {
 	name:     "lon-sw-02"
@@ -15,6 +16,7 @@ package inventory
 	role:     "sspine"
 	site:     "LON2"
 	status:   "Active"
+	asn:      65001
 	loopback: "198.51.100.2/32"
 }]
 

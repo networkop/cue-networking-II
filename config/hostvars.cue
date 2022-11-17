@@ -13,8 +13,9 @@ hostvars: [Name=_]: {
 			address: string & net.IPCIDR
 		}]
 	}]
+	local_context_data: bgp_asn: <=65535 & >=64512
 
-    // computed values
+	// computed values
 	for _, intf in interfaces {
 		if intf.name == "loopback0" {
 			if len(intf.ip_addresses) > 0 {

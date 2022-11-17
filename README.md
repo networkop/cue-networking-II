@@ -27,3 +27,9 @@ cue try ./...
 ```
 cue push ./...
 ```
+
+6. Cleanup `demo.nautobot.com`
+
+```
+cue cleanup ./...
+```

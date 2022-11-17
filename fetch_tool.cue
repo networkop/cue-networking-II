@@ -20,6 +20,7 @@ gqlQuery: """
 	      name
 	    }
 	    id
+	    local_context_data
 	    device_type {
 	      manufacturer {
 	        name

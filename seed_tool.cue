@@ -69,6 +69,9 @@ command: {
 						site:        mySite.guard.resourceID
 						device_role: myRole.guard.resourceID
 						status:      dev.status
+						local_context_data: {
+							bgp_asn: dev.asn
+						}
 					}
 				}
 

@@ -1,7 +1,9 @@
 name: lon-sw-01
 device_role:
   name: lleaf
-id: f0b96ad3-dfc4-4c18-8192-db739a4a36e9
+id: 5e226d38-9d22-4da6-b3b3-9379e24613e6
+local_context_data:
+  bgp_asn: 65000
 device_type:
   manufacturer:
     name: NVIDIA1

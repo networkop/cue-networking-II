@@ -3,7 +3,8 @@ package main
 hostvars: "lon-sw-02": {
 	name: "lon-sw-02"
 	device_role: name: "sspine"
-	id: "60063cb1-79e9-4884-96f7-1a8b7885c6a5"
+	id: "40fc96fa-226c-4264-b859-5dca599e81d7"
+	local_context_data: bgp_asn: 65001
 	device_type: manufacturer: name: "Arista1"
 	interfaces: [{
 		name: "loopback0"
