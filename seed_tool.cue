@@ -203,7 +203,7 @@ command: {
 					queryName:    "model"
 					queryValue:   dev.type
 					resourceName: "model"
-					dep:          deleteDevice.guard.resourceID
+					dep:       deleteDevice.guard.deleteResource.$done
 				}
 
 				deleteVendor: deleteResource & {
@@ -211,7 +211,7 @@ command: {
 					queryName:    "name"
 					queryValue:   dev.vendor
 					resourceName: "manufacturer"
-					dep:          deleteModel.guard.resourceID
+					dep:       deleteModel.guard.deleteResource.$done
 				}
 
 				deleteIP: deleteResource & {
@@ -231,12 +231,14 @@ deleteResource: {
 	queryName:    string
 	queryValue:   string
 	resourceName: string
+	dep: {}
 
 	let query = "\(queryName)=\(queryValue)"
 
 	getResource: http.Get & {
 		url:     apiURL + "?\(query)"
 		request: ipamHeaders
+		$after: dep
 	}
 
 	//logResource: cli.Print & {
@@ -249,18 +251,19 @@ deleteResource: {
 			check: cli.Print & {
 				text: "Found \(resourceName)[\(query)] with ID \(getResponse.results[0].id)"
 			}
-			resourceID: getResponse.results[0].id 
+			resourceID: getResponse.results[0].id
 
-			deleteDevice: http.Delete & {
+			deleteResource: http.Delete & {
 				url:     apiURL
 				request: ipamHeaders & {
 					body: json.Marshal([{
 						id: resourceID
 					}])
-				}
+				}	
 			}
-			deleteDeviceCheck: cli.Print & {
-				text: "Delete \(resourceName)[\(query)] response is '\(deleteDevice.response.status)'"
+			deleteResourceCheck: cli.Print & {
+				text: "Delete \(resourceName)[\(query)] response is '\(deleteResource.response.status)'"
+				
 			}
 		}
 	}
