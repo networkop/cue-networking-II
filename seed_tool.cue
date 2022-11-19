@@ -71,6 +71,7 @@ command: {
 						status:      dev.status
 						local_context_data: {
 							bgp_asn: dev.asn
+							bgp_intfs: dev.uplinks
 						}
 					}
 				}

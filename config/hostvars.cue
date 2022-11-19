@@ -1,6 +1,9 @@
 package main
 
-import "net"
+import (
+	"net"
+	"strings"
+)
 
 hostvars: [Name=_]: {
 	name: Name
@@ -16,11 +19,14 @@ hostvars: [Name=_]: {
 	local_context_data: bgp_asn: <=65535 & >=64512
 
 	// computed values
+	loopbackIP: string & net.IPCIDR
 	for _, intf in interfaces {
 		if intf.name == "loopback0" {
 			if len(intf.ip_addresses) > 0 {
-				routerID: intf.ip_addresses[0].address
+				loopbackIP: intf.ip_addresses[0].address
 			}
 		}
 	}
+	routerID: string & net.IP
+	routerID: strings.Split(loopbackIP, "/")[0]
 }

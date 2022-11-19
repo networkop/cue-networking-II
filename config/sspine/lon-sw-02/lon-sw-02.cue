@@ -3,8 +3,13 @@ package main
 hostvars: "lon-sw-02": {
 	name: "lon-sw-02"
 	device_role: name: "sspine"
-	id: "40fc96fa-226c-4264-b859-5dca599e81d7"
-	local_context_data: bgp_asn: 65001
+	id: "26a022b4-3eeb-40bc-b434-cc9f67a655c4"
+	local_context_data: {
+		bgp_asn: 65001
+		bgp_intfs: [
+			"Ethernet1",
+		]
+	}
 	device_type: manufacturer: name: "Arista1"
 	interfaces: [{
 		name: "loopback0"

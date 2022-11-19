@@ -9,6 +9,7 @@ package inventory
 	status:   "Active"
 	asn:      65000
 	loopback: "198.51.100.1/32"
+	uplinks: ["swp1"]
 }, {
 	name:     "lon-sw-02"
 	vendor:   "Arista1"
@@ -18,6 +19,7 @@ package inventory
 	status:   "Active"
 	asn:      65001
 	loopback: "198.51.100.2/32"
+	uplinks: ["Ethernet1"]
 }]
 
 ipam: {

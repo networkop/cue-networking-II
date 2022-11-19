@@ -1,0 +1,20 @@
+name:   "sw"
+prefix: "lon"
+
+topology: {
+	nodes: {
+		"01": {
+			kind:    "cvx"
+			image:   "networkop/cx:5.0.0"
+			runtime: "docker"
+		}
+		"02": {
+			kind:  "ceos"
+			image: "ceos:4.28.0F"
+		}
+	}
+
+	links: [
+		{endpoints: ["01:swp1", "02:eth1"]}
+	]
+}

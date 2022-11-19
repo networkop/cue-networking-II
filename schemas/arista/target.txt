@@ -1,0 +1,25 @@
+!
+interface Ethernet1
+   no switchport
+   ipv6 enable
+!
+interface Loopback0
+   ip address 198.51.100.2/32
+!
+ip routing ipv6 interfaces
+!
+ipv6 unicast-routing
+!
+peer-filter PF
+   10 match as-range 64512-65535 result accept
+!
+router bgp 65001
+   router-id 198.51.100.2
+   neighbor PG peer group
+   redistribute connected
+   neighbor interface Et1 peer-group PG peer-filter PF
+   !
+   address-family ipv4
+      neighbor PG activate
+      neighbor PG next-hop address-family ipv6 originate
+!
