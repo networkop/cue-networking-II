@@ -70,7 +70,7 @@ command: {
 						device_role: myRole.guard.resourceID
 						status:      dev.status
 						local_context_data: {
-							bgp_asn: dev.asn
+							bgp_asn:   dev.asn
 							bgp_intfs: dev.uplinks
 						}
 					}

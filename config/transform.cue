@@ -60,29 +60,37 @@ nvidiaX: {
 aristaX: {
     _input: {}
     arista.#config & {
+        ipv6_unicast_routing: true
+        ip_routing_ipv6_interfaces: true
         for _, intf in _input.interfaces {
             if strings.HasPrefix(intf.name, "loopback") {
                 loopback_interfaces: [{
                     name: intf.name
                     ip_address: intf.ip_addresses[0].address
-                    // workarounds for custom Jinja filters
-                    ip_address_secondaries: []
+                    // workarounds for jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'mpls'
                     mpls: ldp: {}
                     node_segment: {}
                 }]
             }
         }
+        for _, intf in _input.local_context_data.bgp_intfs {
+            ethernet_interfaces: [{
+                name: intf
+                type: "routed"
+                ipv6_enable: true
+            }]
+        }
         peer_filters: [{
             name: "PF"
             sequence_numbers: [{
-                sequence: "result accept"
-                match: "64512-65535"
+                sequence: 10
+                match: "as-range 64512-65535 result accept"
             }]
         }]
         router_bgp: {
             peer_groups: [{
                 name: "PG"
-                // workarounds for custom Jinja filters
+                // workarounds for jinja2.exceptions.UndefinedError
                 remove_private_as: {}
                 remove_private_as_ingress: {}
                 allowas_in: {}
@@ -109,44 +117,15 @@ aristaX: {
                         address_family_ipv6_originate: true
                     }
                 }]
-                // workarounds for custom Jinja filters
-                neighbors: []
-                networks: []
             }
-            // workarounds for custom Jinja filters
-            neighbors: [{
-                remove_private_as: {}
-                remove_private_as_ingress: {}
-                allowas_in: {}
-                rib_in_pre_policy_retain: {}
-                default_originate: {}
-                link_bandwidth: {}
+            redistribute_routes: [{
+                source_protocol: "connected"
             }]
-            aggregate_addresses: [{
-                prefix: ""
-            }]
-            redistribute_routes: [{}]
-            vlan_aware_bundles: [{
-                name: ""
-                rd_evpn_domain: {}
-                route_targets: {
-                    both: []
-                    import: []
-                    export: []
-                    import_evpn_domains: []
-                    export_evpn_domains: []
-                    import_export_evpn_domains: []
-                }
-                redistribute_routes: []
-                no_redistribute_routes: []
-                vlan: ""
-            }]
+            // workarounds for jinja2.exceptions.UndefinedError
             distance: {}
             maximum_paths: {}
             updates: {}
-            bgp_defaults: []
             bgp: bestpath: {}
-            vrfs: []
         }
         
     }

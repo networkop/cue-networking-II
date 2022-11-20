@@ -17,14 +17,17 @@ command: try: {
 			hvars: cli.Print & {
 				text: "-== hostvars[\(dev.name)] ==-\n" + yaml.Marshal(vars)
 			}
-			let conf = config[(dev.name)]
-			cfgs: cli.Print & {
-				text: "-== configs[\(dev.name)] ==-\n" + yaml.Marshal(conf)
-			}
+		}
+	}
+}
 
+command: show: {
+	for _, dev in inventory.#devices {
+		(dev.name): {
+			let conf = config[(dev.name)]
 			if dev.vendor == "Arista1" {
 				commands: exec.Run & {
-					cmd: ["j2", "-f", "json", "schemas/arista/eos.conf.j2", "-"]
+					cmd: ["j2", "--tests", "jinja/tests/defined.py", "--filters", "jinja/filters/combined.py", "-f", "json", "schemas/arista/eos.conf_original.j2", "-"]
 					stdin:  json.Marshal(conf)
 					stdout: string
 				}

@@ -15,10 +15,16 @@ cue apply ./...
 cue fetch ./...
 ```
 
-3. Print generated per-device structured configurations
+3. Print per-device structured configurations
 
 ```
 cue try ./...
+```
+
+4. Print final device configurations
+
+```
+cue show ./...
 ```
 
 4. Apply network configurations
@@ -41,18 +47,9 @@ cue cleanup ./...
 A bit of sed-foo to remove custom filters and standardise Jinja:
 
 ```
-sed -E -i 's/\|\s+arista\.avd\.\S+//' arista/eos.conf.j2
-sed -E -i 's/arista.avd.defined/defined/g' arista/eos.conf.j2
-sed -i -E 's/defined\(true\)/defined/' schemas/arista/eos.conf.j2
-sed -i -E 's/defined\(false\)/defined/' schemas/arista/eos.conf.j2
-sed -i -E 's/defined\(all\)/defined/' schemas/arista/eos.conf.j2
+sed -E -i 's/arista.avd./arista_avd_/g' arista/eos.conf.j2
 ```
 
-Repeat until you see no custom filters
-
-```
-grep -i arista arista/eos.conf.j2
-```
 
 2. Convert Jinja template to a JSON schema
 
