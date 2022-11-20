@@ -176,13 +176,18 @@ sed -E -i 's/arista.avd./arista_avd_/g' arista/eos.conf_original.j2
 j2 --tests jinja/tests/defined.py --filters jinja/filters/combined.py -f json schemas/arista/eos.conf_original.j2 -
 ```
 
-## Building the lab
+## Working with the lab
 
 Build the lab topology using containerlab:
 
 ```
-cd lab;
-sudo containerlab -t two-node.yml
+cue lab-up ./...
+```
+
+Destroy the lab
+
+```
+cue lab-down ./...
 ```
 
 If running on WSL2, adjust the default iptables rules
