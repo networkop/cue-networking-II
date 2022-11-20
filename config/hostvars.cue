@@ -12,7 +12,7 @@ hostvars: [Name=_]: {
 	device_type: manufacturer: name: string
 	interfaces: [...{
 		name: string
-		ip_address: [...{
+		ip_addresses: [...{
 			address: string & net.IPCIDR
 		}]
 	}]

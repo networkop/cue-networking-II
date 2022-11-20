@@ -1,0 +1,29 @@
+---
+    interface:
+      lo:
+        ip:
+          address:
+            198.51.100.1/32: {}
+        type: loopback
+      swp1:
+        type: swp
+    router:
+      bgp:
+        enable: on
+    vrf:
+      default:
+        router:
+          bgp:
+            address-family:
+              ipv4-unicast:
+                enable: on
+                redistribute:
+                  connected:
+                    enable: on
+            autonomous-system: 65000
+            enable: on
+            neighbor:
+              swp1:
+                remote-as: external
+                type: unnumbered
+            router-id: 198.51.100.1

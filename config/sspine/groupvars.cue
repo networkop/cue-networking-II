@@ -1,6 +1,6 @@
 package main
 
 hostvars: [Name=_]: {
-	name: Name
-    groupvars: "SSPINE-VALUE"
+	name:      Name
+	groupvars: "SSPINE-VALUE"
 }
