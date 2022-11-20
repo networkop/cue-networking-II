@@ -2,12 +2,12 @@ package inventory
 
 auth: {
 	nvidia: {
-		user:     *"cumulus" | string @tag(NVIDIA_USER)
-		password: *"cumulus" | string @tag(NVIDIA_PASSWORD)
+		user:     *"cumulus" | string @tag(nvidia_user)
+		password: *"cumulus" | string @tag(nvidia_pwd)
 	}
 	arista: {
-		user:     *"admin" | string @tag(ARISTA_USER)
-		password: *"admin" | string @tag(ARISTA_PASSWORD)
+		user:     *"admin" | string @tag(arista_user)
+		password: *"admin" | string @tag(arista_pwd)
 	}
 }
 
