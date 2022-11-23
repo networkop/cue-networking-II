@@ -12,31 +12,13 @@ import (
 	"github.com/networkop/cue-networking-II/inventory"
 )
 
-gqlQuery: """
-	query {
-	  devices(name: "{{.name}}") {
-	    name
-	    device_role {
-	      name
-	    }
-	    id
-	    local_context_data
-	    device_type {
-	      manufacturer {
-	        name
-	      }
-	    }
-	    interfaces {
-	      name
-	      ip_addresses {
-	        address
-	      }
-	    }
-	  }
-	}
-	"""
+gqlQuery: file.Read & {
+	filename: "query.gql"
+	contents: string
+}
 
 command: fetch: {
+
 	for _, dev in inventory.#devices {
 		(dev.name): {
 
@@ -44,7 +26,7 @@ command: fetch: {
 				url:     inventory.ipam.url + "/graphql/"
 				request: inventory.ipam.headers & {
 					body: json.Marshal({
-						query: template.Execute(gqlQuery, {name: dev.name})
+						query: template.Execute(gqlQuery.contents, {name: dev.name})
 					})
 				}
 			}

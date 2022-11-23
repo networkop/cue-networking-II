@@ -1,0 +1,15 @@
+query {
+    devices(name: "{{.name}}") {
+        name
+	    device_role { name }
+	    id
+	    local_context_data
+	    device_type {
+            manufacturer { name }
+	    }
+	    interfaces {
+            name
+            ip_addresses { address }
+        }
+    }
+}
