@@ -209,14 +209,12 @@ deleteResource: {
 	queryName:    string
 	queryValue:   string
 	resourceName: string
-	dep: {}
 
 	let query = "\(queryName)=\(queryValue)"
 
 	getResource: http.Get & {
 		url:     apiURL + "?\(query)"
 		request: inventory.ipam.headers
-		$after:  dep
 	}
 
 	//logResource: cli.Print & {
