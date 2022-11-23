@@ -129,7 +129,7 @@ command: {
 					queryName:    "model"
 					queryValue:   dev.type
 					resourceName: "model"
-					dep:          deleteDevice.guard.deleteResource.$done
+					getResource: $after: deleteDevice.guard.deleteResource
 				}
 
 				deleteVendor: deleteResource & {
@@ -137,7 +137,7 @@ command: {
 					queryName:    "name"
 					queryValue:   dev.vendor
 					resourceName: "manufacturer"
-					dep:          deleteModel.guard.deleteResource.$done
+					getResource: $after: deleteModel.guard.deleteResource
 				}
 
 				deleteIP: deleteResource & {

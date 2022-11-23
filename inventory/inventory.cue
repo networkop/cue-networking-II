@@ -38,8 +38,8 @@ auth: {
 }]
 
 ipam: {
-	url:   *"https://demo.nautobot.com/api" | string            @tag(IPAM_URL)
-	token: *"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" | string @tag(IPAM_TOKEN)
+	url:   *"https://demo.nautobot.com/api" | string            @tag(ipam_url)
+	token: *"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" | string @tag(ipam_token)
 	headers: header: {
 		"Authorization": "Token \(token)"
 		"Accept":        "application/json"
